@@ -9,7 +9,7 @@ train:
   beta2: 0.999
 
 data:
-  dir: '/DATA1/VCTK/VCTK-Corpus/wav48' #dir/spk/format
+  dir: './dataset/VCTK-Corpus/wav48' #dir/spk/format
   format: '*mic1.pt'
   cv_ratio: (100./108., 8./108., 0.00) #train/val/test
 

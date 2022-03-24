@@ -1,8 +1,8 @@
-#Some codes are adopted from 
-#https://github.com/ivanvovk/WaveGrad
-#https://github.com/lmnt-com/diffwave
-#https://github.com/lucidrains/denoising-diffusion-pytorch
-#https://github.com/hojonathanho/diffusion
+# Some codes are adopted from
+# https://github.com/ivanvovk/WaveGrad
+# https://github.com/lmnt-com/diffwave
+# https://github.com/lucidrains/denoising-diffusion-pytorch
+# https://github.com/hojonathanho/diffusion
 
 import torch
 import torch.nn as nn
@@ -12,10 +12,12 @@ from math import sqrt
 Linear = nn.Linear
 silu = F.silu
 
+
 def Conv1d(*args, **kwargs):
     layer = nn.Conv1d(*args, **kwargs)
     nn.init.kaiming_normal_(layer.weight)
     return layer
+
 
 class DiffusionEmbedding(nn.Module):
     def __init__(self, hparam):
@@ -24,40 +26,42 @@ class DiffusionEmbedding(nn.Module):
         self.scale = hparam.ddpm.pos_emb_scale
         self.out_channels = hparam.arch.pos_emb_dim
         half_dim = self.n_channels // 2
-        exponents = torch.arange(half_dim, dtype=torch.float32)/ float(half_dim)
-        exponents = 1e-4 ** exponents
-        self.register_buffer('exponents', exponents)
+        exponents = torch.arange(half_dim, dtype=torch.float32) / float(half_dim)
+        exponents = 1e-4**exponents
+        self.register_buffer("exponents", exponents)
         self.projection1 = Linear(self.n_channels, self.out_channels)
         self.projection2 = Linear(self.out_channels, self.out_channels)
 
-    #noise_level: [B]
+    # noise_level: [B]
     def forward(self, noise_level):
         x = self.scale * noise_level * self.exponents.unsqueeze(0)
-        x = torch.cat([x.sin(), x.cos()], dim=-1) #[B, self.n_channels]
+        x = torch.cat([x.sin(), x.cos()], dim=-1)  # [B, self.n_channels]
         x = self.projection1(x)
         x = silu(x)
         x = self.projection2(x)
         x = silu(x)
         return x
 
+
 class ResidualBlock(nn.Module):
     def __init__(self, residual_channels, dilation, pos_emb_dim):
         super().__init__()
-        self.dilated_conv = Conv1d(residual_channels,
-                                   2*residual_channels,
-                                   3,
-                                   padding=dilation,
-                                   dilation=dilation)
+        self.dilated_conv = Conv1d(
+            residual_channels,
+            2 * residual_channels,
+            3,
+            padding=dilation,
+            dilation=dilation,
+        )
         self.diffusion_projection = Linear(pos_emb_dim, residual_channels)
-        self.output_projection = Conv1d(residual_channels,
-                                        2 * residual_channels, 1)
-        self.low_projection = Conv1d(residual_channels,
-                                     2*residual_channels,
-                                     3,
-                                     padding=dilation,
-                                     dilation=dilation)
-
-
+        self.output_projection = Conv1d(residual_channels, 2 * residual_channels, 1)
+        self.low_projection = Conv1d(
+            residual_channels,
+            2 * residual_channels,
+            3,
+            padding=dilation,
+            dilation=dilation,
+        )
 
     def forward(self, x, x_low, noise_level):
         noise_level = self.diffusion_projection(noise_level).unsqueeze(-1)
@@ -78,17 +82,21 @@ class NuWave(nn.Module):
         self.hparams = hparams
         self.input_projection = Conv1d(1, hparams.arch.residual_channels, 1)
         self.low_projection = Conv1d(1, hparams.arch.residual_channels, 1)
-        self.diffusion_embedding = DiffusionEmbedding(
-            hparams)
-        self.residual_layers = nn.ModuleList([
-            ResidualBlock(hparams.arch.residual_channels,
-                          2**(i % hparams.arch.dilation_cycle_length),
-                          hparams.arch.pos_emb_dim)
-            for i in range(hparams.arch.residual_layers)
-        ])
+        self.diffusion_embedding = DiffusionEmbedding(hparams)
+        self.residual_layers = nn.ModuleList(
+            [
+                ResidualBlock(
+                    hparams.arch.residual_channels,
+                    2 ** (i % hparams.arch.dilation_cycle_length),
+                    hparams.arch.pos_emb_dim,
+                )
+                for i in range(hparams.arch.residual_layers)
+            ]
+        )
         self.len_res = len(self.residual_layers)
-        self.skip_projection = Conv1d(hparams.arch.residual_channels,
-                                      hparams.arch.residual_channels, 1)
+        self.skip_projection = Conv1d(
+            hparams.arch.residual_channels, hparams.arch.residual_channels, 1
+        )
         self.output_projection = Conv1d(hparams.arch.residual_channels, 1, 1)
         nn.init.kaiming_normal_(self.output_projection.weight)
 
@@ -100,15 +108,15 @@ class NuWave(nn.Module):
         x_low = silu(x_low)
         noise_level = self.diffusion_embedding(noise_level)
 
-        #This way is more faster!
-        #skip = []
-        skip =0.
+        # This way is more faster!
+        # skip = []
+        skip = 0.0
         for layer in self.residual_layers:
             x, skip_connection = layer(x, x_low, noise_level)
-            #skip.append(skip_connection)
+            # skip.append(skip_connection)
             skip += skip_connection
 
-        #x = torch.sum(torch.stack(skip), dim=0) / sqrt(self.len_res)
+        # x = torch.sum(torch.stack(skip), dim=0) / sqrt(self.len_res)
         x = skip / sqrt(self.len_res)
         x = self.skip_projection(x)
         x = silu(x)
