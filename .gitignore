@@ -8,4 +8,4 @@ __pycache__/*
 dataset
 archive
 .venv
-.pyc
+*.pyc

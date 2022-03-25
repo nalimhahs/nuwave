@@ -74,13 +74,12 @@ def train(args):
     tblogger = TensorBoardLoggerExpanded(hparams)
     ckpt_path = f"{hparams.log.name}_{now}_{{epoch}}"
     checkpoint_callback = ModelCheckpoint(
-        filepath=os.path.join(hparams.log.checkpoint_dir, ckpt_path),
+        # filepath=os.path.join(hparams.log.checkpoint_dir, ckpt_path),
         verbose=True,
         save_last=True,
         save_top_k=3,
         monitor="val_loss",
         mode="min",
-        prefix="",
     )
 
     if args.restart:

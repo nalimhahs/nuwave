@@ -3,7 +3,7 @@ train:
   lr: 0.00003
   weight_decay: 0.00
   num_workers: 8
-  gpus: 1 #ddp
+  gpus: 0 #ddp
   opt_eps: 1e-9
   beta1: 0.5
   beta2: 0.999
