@@ -5,7 +5,7 @@ import torch
 from prefetch_generator import BackgroundGenerator
 import random
 from filters import LowPass
-
+import librosa as rosa
 
 class DataLoader_back(DataLoader):
     def __init__(self, *args, **kwargs):
@@ -21,9 +21,7 @@ class DataLoader_back(DataLoader):
             super().__iter__(), max_prefetch=self.num_workers // 4
         )
 
-
-def create_vctk_dataloader(hparams, cv):
-    def collate_fn(batch):
+def collate_fn(batch):
         wav_list = list()
         wav_l_list = list()
         for wav, wav_l in batch:
@@ -34,6 +32,7 @@ def create_vctk_dataloader(hparams, cv):
 
         return wav_list, wav_l_list
 
+def create_vctk_dataloader(hparams, cv):
     if cv == 0:
         return DataLoader_back(
             dataset=VCTKMultiSpkDataset(hparams, cv),
@@ -134,7 +133,7 @@ class VCTKMultiSpkDataset(Dataset):
         wav_l = self.lowpass(wav, 0)
         wav_l = wav_l[0, :: self.hparams.audio.ratio].view(1, 1, -1)
         # or
-        # wav_l = rosa.resample(wav, hparams.audio.sr, hparams.audio.sr//hparams.audio.ratio)
+        # wav_l = rosa.resample(wav, self.hparams.audio.sr, self.hparams.audio.sr//self.hparams.audio.ratio)
         wav_l = self.upsample(wav_l).view(1, -1)
         return wav, wav_l
 

@@ -9,3 +9,5 @@ dataset
 archive
 .venv
 *.pyc
+VCTK
+tensorboard

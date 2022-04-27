@@ -20,7 +20,7 @@ def wav2pt(wav):
 
 if __name__ == "__main__":
     dir = hparams.data.dir
-    wavs = glob(os.path.join(dir, "*/*.wav"))
+    wavs = glob(os.path.join(dir, "*/*.flac"))
     pool = mp.Pool(processes=hparams.train.num_workers)
     with tqdm(total=len(wavs)) as pbar:
         for _ in tqdm(pool.imap_unordered(wav2pt, wavs)):

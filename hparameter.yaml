@@ -1,5 +1,5 @@
 train:
-  batch_size: 18
+  batch_size: 8
   lr: 0.00003
   weight_decay: 0.00
   num_workers: 8
@@ -9,12 +9,12 @@ train:
   beta2: 0.999
 
 data:
-  dir: './dataset/VCTK-Corpus/wav48' #dir/spk/format
+  dir: './VCTK/wav48_silence_trimmed' #dir/spk/format
   format: '*mic1.pt'
   cv_ratio: (100./108., 8./108., 0.00) #train/val/test
 
 audio:
-  sr: 48000
+  sr: 16000 #target
   nfft: 1024
   hop: 256
   ratio: 2 #upscale_ratio

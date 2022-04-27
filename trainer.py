@@ -11,6 +11,8 @@ import torch
 from pytorch_lightning.utilities import rank_zero_only
 from copy import deepcopy
 from utils.tblogger import TensorBoardLoggerExpanded
+from pytorch_lightning.callbacks import TQDMProgressBar
+
 
 # Other DDPM/Score-based model applied EMA
 # In our works, there are no significant difference
@@ -30,7 +32,7 @@ class EMACallback(Callback):
 
     @rank_zero_only
     def on_train_batch_start(
-        self, trainer, pl_module, batch, batch_idx, dataloader_idx
+        self, trainer, pl_module, batch, batch_idx
     ):
         if hasattr(self, "current_parameters"):
             self.last_parameters = self.current_parameters
@@ -39,7 +41,7 @@ class EMACallback(Callback):
 
     @rank_zero_only
     def on_train_batch_end(
-        self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx
+        self, trainer, pl_module, outputs, batch, batch_idx
     ):
         self.current_parameters = deepcopy(pl_module.state_dict())
         for k, v in self.current_parameters.items():
@@ -50,7 +52,7 @@ class EMACallback(Callback):
         return
 
     @rank_zero_only
-    def on_epoch_end(self, trainer, pl_module):
+    def on_train_epoch_end(self, trainer, pl_module):
         self.queue.append(trainer.current_epoch)
         torch.save(
             self.current_parameters, self.filepath.format(epoch=trainer.current_epoch)
@@ -115,7 +117,7 @@ def train(args):
         args.resume_from = None
 
     trainer = Trainer(
-        checkpoint_callback=checkpoint_callback,
+        enable_checkpointing=checkpoint_callback,
         gpus=hparams.train.gpus,
         accelerator="ddp" if hparams.train.gpus > 1 else None,
         # plugins='ddp_sharded',
@@ -126,13 +128,13 @@ def train(args):
         gradient_clip_val=0.5,
         max_epochs=200000,
         logger=tblogger,
-        progress_bar_refresh_rate=4,
         callbacks=[
             EMACallback(
                 os.path.join(
                     hparams.log.checkpoint_dir, f"{hparams.name}_epoch={{epoch}}_EMA"
                 )
-            )
+            ),
+            TQDMProgressBar(refresh_rate=4)
         ],
         resume_from_checkpoint=None
         if args.resume_from == None or args.restart

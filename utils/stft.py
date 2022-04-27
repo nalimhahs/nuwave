@@ -15,10 +15,7 @@ class STFTMag(nn.Module):
     def forward(self, x):
         T = x.shape[-1]
         stft = torch.stft(
-            x,
-            self.nfft,
-            self.hop,
-            window=self.window,
-        )  # return_complex=False)  #[B, F, TT,2]
+            x, self.nfft, self.hop, window=self.window, return_complex=False
+        )  # [B, F, TT,2]
         mag = torch.norm(stft, p=2, dim=-1)  # [B, F, TT]
         return mag
